@@ -1,3 +1,4 @@
+from Scripts.graph import graph_from_file
 from graph import *
 from node import Node
 def CreateGraph_1 ():
@@ -48,3 +49,7 @@ n = GetClosest(G,15,5)
 print (n.name) # La respuesta debe ser J
 n = GetClosest(G,8,19)
 print (n.name) # La respuesta debe ser B
+G2 = CreateGraph_2()  # Crear el grafo
+Plot(G2)  # Pasar el grafo a la función Plot
+file = graph_from_file("datos.txt")
+Plot(file)
