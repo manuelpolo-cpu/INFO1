@@ -1,9 +1,10 @@
 import math
+
 class Node:
-    def __init__(node,name,coordinate_x,coordinate_y):
-        node.name = name
-        node.coordinate_x = coordinate_x
-        node.coordinate_y = coordinate_y
+    def __init__ (node, name, coordinate_x, coordinate_y):
+        node.name = str(name)
+        node.coordinate_x = float(coordinate_x)
+        node.coordinate_y = float(coordinate_y)
         node.neighbors = []
 
 def AddNeighbor(n1,n2):

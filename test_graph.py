@@ -1,6 +1,5 @@
-from Scripts.graph import graph_from_file
 from graph import *
-from node import Node
+from node import *
 def CreateGraph_1 ():
  G = Graph()
  AddNode(G, Node("A",1,20))
@@ -42,14 +41,31 @@ def CreateGraph_1 ():
  AddSegment(G, "LF","L","F")
  return G
 print ("Probando el grafo...")
-G = CreateGraph_1 ()
-Plot(G)
-PlotNode(G, "C")
+G = CreateGraph_1()
+
+
+
+
+def CreateGraph_2():
+ H = Graph()
+ AddNode(H, Node("A", 1, 20))
+ AddNode(H, Node("B", 8, 17))
+ AddNode(H, Node("C", 15, 20))
+ AddNode(H, Node("E", 2, 4))
+ AddNode(H, Node("F", 6, 5))
+ AddNode(H, Node("K", 3, 15))
+ AddSegment(H, "AB", "A", "B")
+ AddSegment(H, "AE", "A", "E")
+ AddSegment(H, "AK", "A", "K")
+ AddSegment(H, "BA", "B", "A")
+ AddSegment(H, "BC", "B", "C")
+ AddSegment(H, "BF", "B", "F")
+ return H
+print("Probando el siguiente grafo...")
+H = CreateGraph_2()
+
+
 n = GetClosest(G,15,5)
 print (n.name) # La respuesta debe ser J
 n = GetClosest(G,8,19)
 print (n.name) # La respuesta debe ser B
-G2 = CreateGraph_2()  # Crear el grafo
-Plot(G2)  # Pasar el grafo a la función Plot
-file = graph_from_file("datos.txt")
-Plot(file)
