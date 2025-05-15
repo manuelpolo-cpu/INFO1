@@ -9,7 +9,7 @@ class Graph:
         graph.segments = []
 
 def AddNode(g, n):
-    i  = 0
+    i = 0
     while i < len(g.nodes):
         if n.name == g.nodes[i].name:
             return False
@@ -115,15 +115,27 @@ def PlotNode(g, nameOrigin):
     plt.grid(color = 'lightpink')
     plt.show()
 
-def FromFile(filename):
+def FromFile(filename, grafo_existente = None):
+
+    if grafo_existente:
+        return grafo_existente
+
+    FF = Graph()
     plt.figure(figsize=(10, 8))
-    F = open('datos.txt','r')
+    F = open(filename,'r')
     linea = F.readline()
     x = []
     y = []
     names = []
     while linea.strip() != "":
         elementos = linea.split(" ")
+
+        name = elementos[0]
+        x_coord = float(elementos[1])
+        y_coord = float(elementos[2])
+        n = Node(name, x_coord, y_coord)
+        AddNode(FF, n)
+
         names.append(elementos[0])
         x.append(float(elementos[1]))
         y.append(float(elementos[2]))
@@ -131,17 +143,23 @@ def FromFile(filename):
     F.close()
     plt.scatter(x, y, color = 'lightgrey', s = 100)
 
-    F = open('datos.txt','r')
+    F = open(filename,'r')
     linea = F.readline()
     while linea.strip() != "":
         linea = F.readline()
     linea = F.readline()
     while linea != "":
         elementos = linea.split(" ")
+        name_segment = f"{elementos[0]}-{elementos[3]}"
+        name_origin = elementos[0]
         x1 = float(elementos[1])
         y1 = float(elementos[2])
+        name_dest = elementos[3]
         x2 = float(elementos[4])
         y2 = float(elementos[5])
+
+        AddSegment(FF, name_segment, name_origin, name_dest)
+
         distancia = ((x2-x1)**2+(y2-y1)**2)**0.5
         mid_x = (x1+x2)/2
         mid_y = (y1+y2)/2
@@ -159,6 +177,8 @@ def FromFile(filename):
     plt.yticks(range(-5, 26, 5))
     plt.grid(color='lightpink')
     plt.show()
+
+    return FF
 
 def DeleteNode(g, node_name):
     # Buscar el nodo a eliminar en la lista de nodos

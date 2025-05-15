@@ -1,16 +1,18 @@
 import tkinter as tk
-
+import os
 from test_graph import *
 from graph import *
 from tkinter import filedialog
 from path import *
 
+grafos_cargados = {}
 
-I = Graph()
+
+GV = Graph()
 
 
 def vacío():
-    Plot(I)
+    Plot(GV)
 
 
 def ejemplo():
@@ -23,10 +25,30 @@ def inventado():
     Plot(H)
 
 
+
 def plot_file():
-    filename = filedialog.askopenfilename(title = 'Seleccione el archivo', filetypes = [("Text files", "*.txt"), ("All files", "*.*")])
-    if filename:
-        FromFile(filename)
+    filename = filedialog.askopenfilename(title='Seleccione el archivo', filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+    base_name = os.path.basename(filename)
+    if base_name == 'FF.txt':
+        grafo = FromFile(filename, grafo_existente=grafos_cargados.get("FF"))
+        if grafo:  # Si el grafo fue cargado correctamente
+            grafos_cargados["FF"] = grafo
+        return grafo
+    elif base_name == 'G.txt':
+        grafo = FromFile(filename, grafo_existente=grafos_cargados.get("G"))
+        if grafo:
+            grafos_cargados["G"] = grafo
+        return grafo
+    elif base_name == 'H.txt':
+        grafo = FromFile(filename, grafo_existente=grafos_cargados.get("H"))
+        if grafo:
+            grafos_cargados["H"] = grafo
+        return grafo
+    elif base_name == 'GV.txt':
+        grafo = FromFile(filename, grafo_existente=grafos_cargados.get("GV"))
+        if grafo:
+            grafos_cargados["GV"] = grafo
+        return grafo
 
 def input():
     texto = entry.get()
@@ -36,8 +58,10 @@ def input():
             PlotNode(G, nodo_nombre)
         elif grafo_nombre == "H":
             PlotNode(H, nodo_nombre)
-        elif grafo_nombre == "I":
-            PlotNode(I, nodo_nombre)
+        elif grafo_nombre == "GV":
+            PlotNode(GV, nodo_nombre)
+        elif grafo_nombre in grafos_cargados:
+            PlotNode(grafos_cargados[grafo_nombre], nodo_nombre)
         else:
             print("No se encontró el grafo indicado.")
     else:
@@ -58,9 +82,11 @@ def add_node():
         elif grafo == "H":
             AddNode(H, nodo)
             Plot(H)
-        elif grafo == "I":
-            AddNode(I, nodo)
-            Plot(I)
+        elif grafo == "GV":
+            AddNode(GV, nodo)
+            Plot(GV)
+        elif grafo_nombre in grafos_cargados:
+            Plot(grafos_cargados[grafo_nombre], nodo)
         else:
             print("No se encontró el grafo indicado.")
         print("Nodo introducido correctamente")
@@ -79,9 +105,12 @@ def add_segment():
         elif grafo == "H":
             AddSegment(H, recorrido, origin_name, destination_name)
             Plot(H)  # Volver a graficar el grafo con el nuevo segmento
-        elif grafo == "I":
-            AddSegment(I, recorrido, origin_name, destination_name)
+        elif grafo == "GV":
+            AddSegment(GV, recorrido, origin_name, destination_name)
             Plot(I)
+        elif grafo_nombre in grafos_cargados:
+            AddSegment(grafos_cargados[grafo_nombre], recorrido, origin_name, destination_name)
+            Plot(grafos_cargados[grafo_nombre])
         else:
             print("No se encontró el grafo indicado.")
     else:
@@ -98,9 +127,12 @@ def delete_node_from_gui():
         elif grafo == "H":
             DeleteNode(H, nodo)
             Plot(H)
-        elif grafo == "I":
-            DeleteNode((I, nodo))
+        elif grafo == "GV":
+            DeleteNode(GV, nodo)
             Plot(I)
+        elif grafo_nombre in grafos_cargados:
+            DeleteNode(grafos_cargados[grafo_nombre], nodo)
+            Plot(grafos_cargados[grafo_nombre])
         else:
             print("Grafo no encontrado.")
     else:
@@ -115,8 +147,10 @@ def find_path():
             grafo_seleccionado = G
         elif nombre_grafo == "H":
             grafo_seleccionado = H
-        elif nombre_grafo == "I":
-            grafo_seleccionado = I
+        elif nombre_grafo == "GV":
+            grafo_seleccionado = GV
+        elif nombre_grafo in grafos_cargados:
+            grafo_seleccionado = grafos_cargados[nombre_grafo]
         else:
             print("El nombre del grafo no es válido.")
             # Buscar los nodos dentro del grafo por nombre
@@ -144,8 +178,10 @@ def alcanzable():
             grafo_alcance = G
         elif grafo == "H":
             grafo_alcance = H
-        elif grafo_alcanzable == "I":
-            grafo_alcance = I
+        elif grafo_alcanzable == "GV":
+            grafo_alcance = GV
+        elif grafo_alcanzable in grafos_cargados:
+            grafo_alcance = grafos_cargados[grafo_alcanzable]
         else:
             print("Grafo no encontrado")
         origen = next((n for n in grafo_alcance.nodes if n.name == origen), None)
@@ -175,11 +211,17 @@ def save_H():
         ToFile(H, filename)
         print("Grafo H guardado.")
 
-def save_I():
+def save_GV():
     filename = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt")])
     if filename:
-        ToFile(I, filename)
-        print("Grafo I guardado.")
+        ToFile(GV, filename)
+        print("Grafo GV guardado.")
+
+def save_FF ():
+    filename = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt")])
+    if filename:
+        ToFile(FF, filename)
+        print("Grafo FF guardado.")
 
 
 
@@ -321,14 +363,17 @@ button_save_frame.grid(row = 6, column = 0, padx = 5, pady = 5, sticky = tk.N + 
 button_save_frame.rowconfigure(0, weight = 1)
 button_save_frame.rowconfigure(1, weight = 1)
 button_save_frame.columnconfigure(0, weight = 1)
+button_save_frame.columnconfigure(1, weight = 1)
 
 #defino el boton del frame
 button9 = tk.Button(button_save_frame, text = 'SAVE G*', command = save_G)
 button9.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 button10 = tk.Button(button_save_frame, text = 'SAVE H*', command = save_H)
-button10.grid(row = 1, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
-button11 = tk.Button(button_save_frame, text = 'SAVE I*', command = save_I)
-button11.grid(row = 1, column = 1, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+button10.grid(row = 0, column = 1, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+button11 = tk.Button(button_save_frame, text = 'SAVE GV', command = save_GV)
+button11.grid(row = 1, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+button111 = tk.Button(button_save_frame, text = 'SAVE FF*', command = save_FF)
+button111.grid(row = 1, column = 1, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 
 

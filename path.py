@@ -109,7 +109,7 @@ def PlotPath(G, P):
                      arrowprops=dict(facecolor="skyblue", edgecolor="skyblue", arrowstyle="->", lw=2))
 
     for (x, y, c) in costes_hechos:
-        plt.text(x, y, f"{c:.2f}", color="black", fontsize=10, fontweight='bold', va='center', ha='center')
+        plt.text(x, y, f"{c:.2f}", color="black", fontsize=10, fontweight='bold')
 
     for node in camino_parcial.nodes:
         plt.scatter(node.coordinate_x, node.coordinate_y, color='grey', s=120)
