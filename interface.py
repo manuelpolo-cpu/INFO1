@@ -1,28 +1,182 @@
 import tkinter as tk
-import os
+
+from fontTools.misc.cython import returns
 from test_graph import *
 from graph import *
 from tkinter import filedialog
 from path import *
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backend_bases import MouseButton
+import matplotlib.pyplot as plt
+
+
+modo_seleccion = False
+modo_anadir = False
+modo_anadir_segmento = False
+grafo_activo = None
+nodos_activos = None
+canvas = None
+canvas_picture = None
+
+
 
 grafos_cargados = {}
 
 
-GV = Graph()
+
+
+def show_plot(fig, G):
+    global grafo_activo, nodos_activos, canvas_picture, canvas
+    grafo_activo = G
+    nodos_activos = G.nodes
+    if canvas_picture is not None:
+        canvas_picture.grid_forget()
+    canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
+    canvas.draw()
+    canvas_picture = canvas.get_tk_widget()
+    canvas_picture.config(width=600, height=400)
+    canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N+tk.E+tk.W+tk.S)
+    canvas.mpl_connect('button_press_event', on_click)
+
+
+
+
+
+
+def seleccionar_vecinos():
+    global modo_seleccion
+    modo_seleccion = True
+    print("Modo selección activado: haz clic en un nodo")
+
+
+def Add_Node():
+    global modo_anadir
+    if modo_anadir:
+        modo_anadir = False
+        print("Modo añadir nodo desactivado.")
+    else:
+        modo_anadir = True
+        print("Modo añadir nodo activado. Haz clic para añadir un nodo.")
+
+
+def Add_Segment():
+    global modo_anadir_segmento
+    if modo_anadir_segmento:
+        modo_anadir_segmento = False
+        print("Modo añadir segmento desactivado.")
+    else:
+        modo_anadir_segmento = True
+        print("Modo añadir segmento activado. Haz clic para añadir un segmento.")
+
+
+
+nodos_segmento = []
+def on_click(event):
+    global modo_anadir, modo_seleccion, grafo_activo, canvas_picture, canvas, nodos_segmento, modo_anadir_segmento
+    x_click, y_click = event.xdata, event.ydata
+    if x_click is None or y_click is None:
+        return
+    if modo_anadir:
+        nuevo_nombre = f"N{len(grafo_activo.nodes) + 1}"
+        nuevo_nodo = Node(nuevo_nombre, x_click, y_click)
+        if AddNode(grafo_activo, nuevo_nodo):
+            Plot(grafo_activo)
+            print(f"Nodo añadido: {nuevo_nombre} en ({x_click:.2f}, {y_click:.2f})")
+        else:
+            print(f"Error: El nodo {nuevo_nombre} ya existe.")
+        fig = plt.gcf()
+        new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
+        new_canvas.mpl_connect('button_press_event', on_click)
+        new_canvas.draw()
+        if canvas_picture is not None:
+            canvas_picture.grid_forget()
+        canvas_picture = new_canvas.get_tk_widget()
+        canvas_picture.config(width=600, height=400)
+        canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
+        canvas = new_canvas
+
+
+    if modo_seleccion:
+        threshold = 1
+        for nodo in grafo_activo.nodes:
+            dist = ((nodo.coordinate_x - x_click)**2 + (nodo.coordinate_y - y_click)**2)**0.5
+            if dist <= threshold:
+                modo_seleccion = False
+                plt.close('all')
+                PlotNode(grafo_activo, nodo.name)
+                fig = plt.gcf()
+                new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
+                new_canvas.draw()
+                if canvas_picture is not None:
+                    canvas_picture.grid_forget()
+                canvas_picture = new_canvas.get_tk_widget()
+                canvas_picture.config(width=600, height=400)
+                canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
+                canvas = new_canvas
+                break
+
+
+    if not modo_anadir_segmento:
+        return
+
+    if x_click is None or y_click is None:
+        return
+
+    if modo_anadir_segmento:
+        threshold = 1
+        for nodo in grafo_activo.nodes:
+            x, y = nodo.coordinate_x, nodo.coordinate_y
+            dist = ((x - x_click) ** 2 + (y - y_click) ** 2) ** 0.5
+            if dist <= threshold:
+                nodos_segmento.append(nodo.name)
+                print(f"Nodo seleccionado: {nodo.name}")
+                break
+
+        if len(nodos_segmento) == 2:
+            name_origin = nodos_segmento[0]
+            name_dest = nodos_segmento[1]
+            name_segment = f"{name_origin}-{name_dest}"
+            AddSegment(grafo_activo, name_segment, name_origin, name_dest)
+            print(f"Segmento añadido: {name_segment}")
+            nodos_segmento = []
+            plt.close('all')
+            Plot(grafo_activo)
+            fig = plt.gcf()
+            new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
+            new_canvas.mpl_connect('button_press_event', on_click)
+            new_canvas.draw()
+            if canvas_picture is not None:
+                canvas_picture.grid_forget()
+            canvas_picture = new_canvas.get_tk_widget()
+            canvas_picture.config(width=600, height=400)
+            canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
+            canvas = new_canvas
+
+
+
+
 
 
 def vacío():
+    GV = Graph()
     Plot(GV)
+    fig = plt.gcf()
+    show_plot(fig, GV)
 
 
 def ejemplo():
     G = CreateGraph_1()
     Plot(G)
+    fig = plt.gcf()
+    show_plot(fig, G)
 
 
 def inventado():
     H = CreateGraph_2()
     Plot(H)
+    fig = plt.gcf()
+    show_plot(fig, H)
+
 
 
 
@@ -50,71 +204,9 @@ def plot_file():
             grafos_cargados["GV"] = grafo
         return grafo
 
-def input():
-    texto = entry.get()
-    if len(texto.split()) == 2:
-        grafo_nombre, nodo_nombre = texto.split()
-        if grafo_nombre == "G":
-            PlotNode(G, nodo_nombre)
-        elif grafo_nombre == "H":
-            PlotNode(H, nodo_nombre)
-        elif grafo_nombre == "GV":
-            PlotNode(GV, nodo_nombre)
-        elif grafo_nombre in grafos_cargados:
-            PlotNode(grafos_cargados[grafo_nombre], nodo_nombre)
-        else:
-            print("No se encontró el grafo indicado.")
-    else:
-        print("Formato incorrecto. Usa: G A")
-
-
-def add_node():
-    texto = entry_2.get()
-    if len(texto.split()) == 4:  # Comprobar si hay 4 partes: G, nombre, x, y
-        grafo, nodo_nombre, nodo_x, nodo_y = texto.split()
-        # Crear un objeto Node y luego pasarlo a AddNode
-        nodo_x = float(nodo_x)  # Asegúrate de convertir las coordenadas a float
-        nodo_y = float(nodo_y)
-        nodo = Node(nodo_nombre, nodo_x, nodo_y)  # Crear el nodo correctamente
-        if grafo == "G":
-            AddNode(G, nodo)
-            Plot(G)
-        elif grafo == "H":
-            AddNode(H, nodo)
-            Plot(H)
-        elif grafo == "GV":
-            AddNode(GV, nodo)
-            Plot(GV)
-        elif grafo_nombre in grafos_cargados:
-            Plot(grafos_cargados[grafo_nombre], nodo)
-        else:
-            print("No se encontró el grafo indicado.")
-        print("Nodo introducido correctamente")
-    else:
-        print("Formato incorrecto. Usa: G nombre x y")
 
 
 
-def add_segment():
-    texto = entry_3.get()  # Obtener el texto del campo de entrada
-    if len(texto.split()) == 4:  # Comprobar que se tiene el formato correcto: G NodoA NodoB
-        grafo, recorrido, origin_name, destination_name = texto.split()
-        if grafo == "G":
-            AddSegment(G, recorrido, origin_name, destination_name)
-            Plot(G)  # Volver a graficar el grafo con el nuevo segmento
-        elif grafo == "H":
-            AddSegment(H, recorrido, origin_name, destination_name)
-            Plot(H)  # Volver a graficar el grafo con el nuevo segmento
-        elif grafo == "GV":
-            AddSegment(GV, recorrido, origin_name, destination_name)
-            Plot(I)
-        elif grafo_nombre in grafos_cargados:
-            AddSegment(grafos_cargados[grafo_nombre], recorrido, origin_name, destination_name)
-            Plot(grafos_cargados[grafo_nombre])
-        else:
-            print("No se encontró el grafo indicado.")
-    else:
-        print("Formato incorrecto. Usa: G NodoA NodoB")
 
 
 def delete_node_from_gui():
@@ -123,16 +215,16 @@ def delete_node_from_gui():
         grafo, nodo = texto.split()
         if grafo == "G":
             DeleteNode(G, nodo)
-            Plot(G)
+            Plot(G, (10,8), range(-5, 26, 5), range(-5, 26, 5))
         elif grafo == "H":
             DeleteNode(H, nodo)
-            Plot(H)
+            Plot(H, (10,8), range(-5, 26, 5), range(-5, 26, 5))
         elif grafo == "GV":
             DeleteNode(GV, nodo)
-            Plot(I)
+            Plot(I, (10,8), range(-5, 26, 5), range(-5, 26, 5))
         elif grafo_nombre in grafos_cargados:
             DeleteNode(grafos_cargados[grafo_nombre], nodo)
-            Plot(grafos_cargados[grafo_nombre])
+            Plot(grafos_cargados[grafo_nombre], (10,8), range(-5, 26, 5), range(-5, 26, 5))
         else:
             print("Grafo no encontrado.")
     else:
@@ -246,6 +338,8 @@ root.rowconfigure(9, weight = 1)
 
 
 
+
+
 #en la columna 0 fila 0 tenemos el frame para mostrar el gráfico de ejemplo
 button_example_frame = tk.LabelFrame(root, text = 'Seleccionar grafo a mostrar')
 button_example_frame.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
@@ -280,16 +374,12 @@ input_frame = tk.LabelFrame(root, text = 'Input')
 input_frame.grid(row = 2, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 input_frame.rowconfigure(0, weight = 1)
-input_frame.rowconfigure(1, weight = 1)
 input_frame.columnconfigure(0, weight = 1)
 
-#colocamos el cuadro de tecto
-entry = tk.Entry(input_frame)
-entry.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 #y el boton del input
-button4 = tk.Button(input_frame, text = 'Mostrar vecinos', command = input)
-button4.grid(row = 1, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+button4 = tk.Button(input_frame, text = 'Mostrar vecinos', command = seleccionar_vecinos)
+button4.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 
 
@@ -298,16 +388,12 @@ input_frame_2 = tk.LabelFrame(root, text = 'Input')
 input_frame_2.grid(row = 3, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 input_frame_2.rowconfigure(0, weight = 1)
-input_frame_2.rowconfigure(1, weight = 1)
 input_frame_2.columnconfigure(0, weight = 1)
 
-#colocamos el cuadro de tecto
-entry_2 = tk.Entry(input_frame_2)
-entry_2.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 #y el boton del input
-button5 = tk.Button(input_frame_2, text = 'Introduzca un nodo', command = add_node)
-button5.grid(row = 1, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+button5 = tk.Button(input_frame_2, text = 'Introduzca un nodo', command = Add_Node)
+button5.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 
 #en la columna 0 fila 4 está el input frame en el cual el usuario introduce un grafo y el nodo del que quiere los vecinos
@@ -315,16 +401,11 @@ input_frame_3 = tk.LabelFrame(root, text = 'Input')
 input_frame_3.grid(row = 4, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 input_frame_3.rowconfigure(0, weight = 1)
-input_frame_3.rowconfigure(1, weight = 1)
 input_frame_3.columnconfigure(0, weight = 1)
 
-#colocamos el cuadro de tecto
-entry_3 = tk.Entry(input_frame_3)
-entry_3.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
-
 #y el boton del input
-button6 = tk.Button(input_frame_3, text = 'Introduzca un segmento', command = add_segment)
-button6.grid(row = 1, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+button6 = tk.Button(input_frame_3, text = 'Introduzca un segmento', command = Add_Segment)
+button6.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 
 
@@ -416,7 +497,7 @@ button13.grid(row = 1, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk
 
 #en la columma 1 fila 0 de la ventana principal están los outputs
 outputs_frame = tk.LabelFrame(root, text = 'Outputs')
-outputs_frame.grid(row = 0, column = 1, rowspan = 3, padx = 5, pady = 5, sticky = "nsew")
+outputs_frame.grid(row = 0, column = 1, rowspan = 9, padx = 5, pady = 5, sticky = "nsew")
 outputs_frame.columnconfigure(0, weight = 1)
 outputs_frame.rowconfigure(0, weight = 1)
 
