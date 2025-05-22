@@ -40,7 +40,11 @@ def tester():
     if shortest_path:
         print("Camino más corto encontrado:", [node.name for node in shortest_path.nodes])
         print("Costo total:", shortest_path.total_cost)
-        PlotPath(G, shortest_path)
+        figsize = (8, 6)
+        xticks = range(-5, 26, 5)
+        yticks = range(-5, 26, 5)
+        PlotPath(G, shortest_path, figsize, xticks, yticks)
+        plt.show()
     else:
         print("No se encontró un camino de A a J.")
     print("Buscando el camino más corto de C a I...")
@@ -48,7 +52,11 @@ def tester():
     if shortest_path_2:
         print("Camino más corto encontrado:", [node.name for node in shortest_path_2.nodes])
         print("Costo total:", shortest_path_2.total_cost)
-        PlotPath(G, shortest_path_2)
+        figsize = (8, 6)
+        xticks = range(-5, 26, 5)
+        yticks = range(-5, 26, 5)
+        PlotPath(G, shortest_path_2, figsize, xticks, yticks)
+        plt.show()
     else:
         print("No se encontró un camino de C a I.")
 tester()
