@@ -44,6 +44,28 @@ def ContainsNode(p, n):
         i += 1
     return False
 
+#encontrar el camino mas corto
+def FindShortestPath(grafo, origen, destino):
+    initial_path = Path(origen, destino)
+    AddNodeToPath(initial_path, origen)
+    current_paths = [initial_path]
+    while current_paths:
+        current_paths.sort(key=lambda path: path.total_cost + Distance(path.nodes[-1], destino))
+        current_path = current_paths.pop(0)
+        if current_path.nodes[-1] == destino:
+            return current_path
+        last_node = current_path.nodes[-1]
+        for neighbor in last_node.neighbors:
+            if ContainsNode(current_path, neighbor):
+                continue
+            new_path = Path(current_path.origen, current_path.destination)
+            for node in current_path.nodes:
+                AddNodeToPath(new_path, node)
+            AddNodeToPath(new_path, neighbor)
+            new_path.total_cost = current_path.total_cost + Distance(last_node, neighbor)
+            current_paths.append(new_path)
+    return None
+
 #plotear el camino
 def PlotPath(G, P, figsize, xticks, yticks):
     total_cost = 0
@@ -115,24 +137,34 @@ def Reachability(g, n1, n2, visited=None):
                 return True
     return False
 
-#encontrar el camino mas corto
-def FindShortestPath(grafo, origen, destino):
-    initial_path = Path(origen, destino)
-    AddNodeToPath(initial_path, origen)
-    current_paths = [initial_path]
-    while current_paths:
-        current_paths.sort(key=lambda path: path.total_cost + Distance(path.nodes[-1], destino))
-        current_path = current_paths.pop(0)
-        if current_path.nodes[-1] == destino:
-            return current_path
-        last_node = current_path.nodes[-1]
-        for neighbor in last_node.neighbors:
-            if ContainsNode(current_path, neighbor):
-                continue
-            new_path = Path(current_path.origen, current_path.destination)
-            for node in current_path.nodes:
-                AddNodeToPath(new_path, node)
-            AddNodeToPath(new_path, neighbor)
-            new_path.total_cost = current_path.total_cost + Distance(last_node, neighbor)
-            current_paths.append(new_path)
-    return None
+#exportar una ruta a un archivo .kml
+def export_to_kml(path, filename):
+    kml_header = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<kml xmlns="http://www.opengis.net/kml/2.2">'
+        '<Document>'
+        f'<name>Shortest Path</name>'
+        f'<description>Path from {path.origen.name} to {path.destination.name}</description>'
+    )
+
+    kml_footer = '</Document></kml>'
+
+    coordinates = " ".join(f"{node.coordinate_x},{node.coordinate_y},0" for node in path.nodes)
+
+    kml_linestring = (
+        '<Placemark>'
+        '<name>Ruta mas corta</name>'
+        '<Style>'
+        '<LineStyle>'
+        '<color>ff0000ff</color>'
+        '<width>4</width>'
+        '</LineStyle>'
+        '</Style>'
+        '<LineString>'
+        '<tessellate>1</tessellate>'
+        f'<coordinates>{coordinates}</coordinates>'
+        '</LineString>'
+        '</Placemark>')
+    kml_content = kml_header + kml_linestring + kml_footer
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(kml_content)

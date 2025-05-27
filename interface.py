@@ -11,6 +11,7 @@ from matplotlib.backend_bases import MouseButton
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 import os
+import tkinter.messagebox as messagebox
 
 
 #inicializar todos los modos y variables globales
@@ -30,6 +31,7 @@ destino_seleccionado = None
 graph_cat = None
 graph_esp = None
 graph_eur = None
+shortest_path_global = None
 
 
 #mostrar un grafo por pantalla dentro del contenedor
@@ -113,12 +115,94 @@ def alcanzable():
         print("Modo alcanzable activado. Haz clic para ver si son alcanzables. ")
 
 
+def exportar():
+    global shortest_path_global
+    if shortest_path_global is None:
+        messagebox.showwarning("Exportar ruta", "No hay camino para exportar.")
+        return
+    export_to_kml(shortest_path_global, "ruta_exportada.kml")
+    messagebox.showinfo("Exportar ruta", "Archivo KML exportado con éxito.")
+
+
+def camino():
+    global shortest_path_global, grafo_activo, canvas_picture
+    nodos_text = entry_nodos.get().strip()
+    if not nodos_text:
+        print("Introduce dos nodos separados por espacio, ej: A D")
+        return
+    nodos = nodos_text.split()
+    if len(nodos) != 2:
+        print("Introduce exactamente dos nodos separados por espacio")
+        return
+    origen_name, destino_name = nodos
+
+    # Buscar nodos en el grafo por nombre (asumiendo que grafo_activo.nodes es iterable con atributo name)
+    origen = next((n for n in grafo_activo.nodes if n.name == origen_name), None)
+    destino = next((n for n in grafo_activo.nodes if n.name == destino_name), None)
+
+    if origen is None or destino is None:
+        print(f"Nodos no encontrados en el grafo: {origen_name}, {destino_name}")
+        return
+
+    # Encontrar camino más corto
+    shortest_path = FindShortestPath(grafo_activo, origen, destino)
+
+    if not shortest_path or not shortest_path.nodes:
+        print("No se encontró camino entre los nodos indicados.")
+        return
+
+    # Plotear camino (adaptar a tu función y parámetros)
+    plt.close('all')  # Cierra figuras previas
+
+    if 'graph_cat' in globals() and grafo_activo == graph_cat:
+        figsize = (15, 7)
+        xticks = range(-1, 5, 1)
+        yticks = np.arange(38, 42.5, 0.5)
+    elif 'graph_esp' in globals() and grafo_activo == graph_esp:
+        figsize = (17, 8)
+        xticks = range(-9, 5, 1)
+        yticks = np.arange(37, 43.5, 0.5)
+    elif 'graph_eur' in globals() and grafo_activo == graph_eur:
+        figsize = (17, 8)
+        xticks = range(-6, 6, 1)
+        yticks = np.arange(37.5, 50, 0.5)
+    elif 'G' in globals() and grafo_activo == G:
+        figsize = (8, 6)
+        xticks = range(-5, 26, 5)
+        yticks = range(-5, 26, 5)
+    elif 'FF' in globals() and grafo_activo == FF:
+        figsize = (8, 6)
+        xticks = range(-5, 26, 5)
+        yticks = range(-5, 26, 5)
+    else:
+        figsize = (8, 6)
+        xticks = range(-5, 26, 5)
+        yticks = range(-5, 26, 5)
+
+    PlotPath(grafo_activo, shortest_path, figsize, xticks, yticks)
+
+    # Mostrar en canvas tkinter (igual que tú haces)
+    fig = plt.gcf()
+    new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
+    new_canvas.mpl_connect('button_press_event', on_click)
+    new_canvas.draw()
+
+    if canvas_picture is not None:
+        canvas_picture.grid_forget()
+    canvas_picture = new_canvas.get_tk_widget()
+    canvas_picture.config(width=600, height=400)
+    canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
+    canvas = new_canvas
+
+    shortest_path_global = shortest_path
+
+
 #inicializar todas las listas vacías que usaré posteriormente
 nodos_seleccionados = []
 nodos_segmento = []
 def on_click(event):
     print("Click detectado")
-    global modo_anadir, modo_seleccion, grafo_activo, canvas_picture, canvas, nodos_segmento, modo_anadir_segmento, modo_eliminar, origen_seleccionado, destino_seleccionado, nodos_seleccionados
+    global modo_anadir, modo_seleccion, grafo_activo, canvas_picture, canvas, nodos_segmento, modo_anadir_segmento, modo_eliminar, origen_seleccionado, destino_seleccionado, nodos_seleccionados, shortest_path_global
     x_click, y_click = event.xdata, event.ydata
 
     if x_click is None or y_click is None:
@@ -337,6 +421,7 @@ def on_click(event):
             destino_seleccionado = nodo_mas_cercano
             print(f"Destino seleccionado: {destino_seleccionado.name}")
             shortest_path = FindShortestPath(grafo_activo, origen_seleccionado, destino_seleccionado)
+            shortest_path_global = shortest_path
             plt.close('all')
             if 'graph_cat' in globals() and grafo_activo == graph_cat:
                 figsize = (15, 7)
@@ -540,11 +625,11 @@ def plot_file():
 
 ### PROGRAMA PRINCIPAL ###
 root = tk.Tk()
-root.geometry("1500x850") # Tamaño inicial
+root.geometry("1700x950") # Tamaño inicial
 root.title("INFO_PROJECT")
 #la ventana principal tiene once filas y dos columnas
 root.columnconfigure(0, weight = 1)
-root.columnconfigure(1, weight = 10)
+root.columnconfigure(1, weight = 15)
 root.rowconfigure(0, weight = 1)
 root.rowconfigure(1, weight = 1)
 root.rowconfigure(2, weight = 1)
@@ -556,6 +641,8 @@ root.rowconfigure(7, weight = 1)
 root.rowconfigure(8, weight = 1)
 root.rowconfigure(9, weight = 1)
 root.rowconfigure(10, weight = 1)
+root.rowconfigure(11, weight = 1)
+root.rowconfigure(12, weight = 1)
 
 
 #en la columna 0 fila 0 tenemos el frame para mostrar el gráfico de ejemplo
@@ -687,9 +774,35 @@ button15= tk.Button(input_frame_7, text = 'EUR', command = europa, bg = 'lightbl
 button15.grid(row = 1, column = 0, columnspan = 2, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 
+#en la columna 0 fila 9 está el input frame en el cual el usuario introduce un grafo y el nodo del que quiere los vecinos
+input_frame_6 = tk.LabelFrame(root, text = 'CAMIvNO_TEXTO')
+input_frame_6.grid(row = 11, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+#configuración del frame
+input_frame_6.rowconfigure(0, weight = 1)
+input_frame_6.rowconfigure(1, weight = 1)
+input_frame_6.columnconfigure(0, weight = 1)
+#entrada de texto
+entry_nodos = tk.Entry(input_frame_6)
+entry_nodos.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
+#y el boton del frame
+button13= tk.Button(input_frame_6, text = 'Encontrar camino', command = camino, bg = 'lightblue', fg = 'white')
+button13.grid(row = 1, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+
+
+#en la columna 0 fila 9 está el input frame en el cual el usuario introduce un grafo y el nodo del que quiere los vecinos
+input_frame_6 = tk.LabelFrame(root, text = 'EXPORT TO KML')
+input_frame_6.grid(row = 12, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+#configuración del frame
+input_frame_6.rowconfigure(0, weight = 1)
+input_frame_6.columnconfigure(0, weight = 1)
+#y el boton del frame
+button13= tk.Button(input_frame_6, text = 'Exportar', command = exportar, bg = 'lightblue', fg = 'white')
+button13.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+
+
 #en la columma 1 fila 0 de la ventana principal están los outputs
 outputs_frame = tk.LabelFrame(root, text = 'Outputs')
-outputs_frame.grid(row = 0, column = 1, rowspan = 11, padx = 5, pady = 5, sticky = "nsew")
+outputs_frame.grid(row = 0, column = 1, rowspan = 13, padx = 5, pady = 5, sticky = "nsew")
 outputs_frame.columnconfigure(0, weight = 1)
 outputs_frame.rowconfigure(0, weight = 1)
 
