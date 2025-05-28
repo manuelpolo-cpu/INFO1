@@ -24,7 +24,6 @@ def AddNode(g, n):
     g.nodes.append(n)
     return True
 
-
 #función para añadir segmentos
 def AddSegment(g, name, nameOriginNode, nameDestinationNode):
     encontrados = 0
@@ -47,7 +46,6 @@ def AddSegment(g, name, nameOriginNode, nameDestinationNode):
     else:
         return False
 
-
 #función para encontrar el nodo mas cercano a un punto
 def GetClosest(g, x, y):
     closest = None
@@ -60,7 +58,6 @@ def GetClosest(g, x, y):
             min_distance = distance
             closest = node
     return closest
-
 
 #función para plotear un grafo
 def Plot(g, figsize, xticks, yticks):
@@ -87,7 +84,6 @@ def Plot(g, figsize, xticks, yticks):
     plt.xticks(xticks)
     plt.yticks(yticks)
     plt.grid(color = 'lightpink')
-
 
 #función para plotear los vecinos de un nodo
 def PlotNode(g, nameOrigin, figsize, xticks, yticks):
@@ -134,7 +130,6 @@ def PlotNode(g, nameOrigin, figsize, xticks, yticks):
     plt.yticks(yticks)
     plt.grid(color = 'lightpink')
 
-
 #función para plotear un grafo que viene de un archivo
 def FromFile(filename, grafo_existente=None):
     FF = Graph()
@@ -162,7 +157,6 @@ def FromFile(filename, grafo_existente=None):
                 AddSegment(FF, name_segment, name_origin, name_dest)
     return FF
 
-
 #función para eliminar un nodo de un grafo
 def DeleteNode(g, node_name):
     # Buscar el nodo a eliminar en la lista de nodos
@@ -180,7 +174,6 @@ def DeleteNode(g, node_name):
     g.nodes.remove(node_to_remove)
     print(f"El nodo {node_name} y sus segmentos han sido eliminados.")
     return True
-
 
 #función para llevar un grafo a un archivo
 def ToFile(grafo, filename):

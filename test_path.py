@@ -5,9 +5,7 @@ from segment import *
 
 
 def tester():
-
     G = Graph()
-
     A = Node("A", 0, 0)
     B = Node("B", 5, 5)
     C = Node("C", 10, 0)
@@ -18,10 +16,8 @@ def tester():
     H = Node("H", 15, -5)
     I = Node("I", 20, -5)
     J = Node("J", 25, 0)
-
     for node in [A, B, C, D, E, F, G_, H, I, J]:
         AddNode(G, node)
-
     AddNeighbor(A, B)
     AddNeighbor(A, F)
     AddNeighbor(A, C)
@@ -33,8 +29,7 @@ def tester():
     AddNeighbor(H, I)
     AddNeighbor(I, J)
     AddNeighbor(E, J)
-    AddNeighbor(C, G_)  # Alternativa de C hacia el camino inferior
-
+    AddNeighbor(C, G_)
     print("Buscando el camino más corto de A a J...")
     shortest_path = FindShortestPath(G, A, J)
     if shortest_path:

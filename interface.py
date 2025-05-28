@@ -2,10 +2,11 @@
 from test_graph import *
 from graph import *
 from airSpace import *
-from tkinter import filedialog
 from path import *
 #importar todas las librerias gráficas y numéricas
 import tkinter as tk
+from tkinter import filedialog
+from tkinter import simpledialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backend_bases import MouseButton
 import matplotlib.pyplot as plt
@@ -20,6 +21,7 @@ modo_anadir = False
 modo_anadir_segmento = False
 modo_eliminar = False
 modo_encontrar_camino = False
+modo_alcanzabilidad = False
 modo_alcanzable = None
 grafo_activo = None
 nodos_activos = None
@@ -49,10 +51,20 @@ def show_plot(fig, G):
     if toolbar_widget is not None:
         toolbar_widget.grid_forget()
     toolbar_frame = tk.Frame(outputs_frame)
-    toolbar_frame.grid(row=11, column=0, padx=5, pady=2, sticky=tk.W)
+    toolbar_frame.grid(row=13, column=0, padx=5, pady=2, sticky=tk.W)
     toolbar = NavigationToolbar2Tk(canvas, toolbar_frame)
     toolbar.update()
     toolbar_widget = toolbar
+
+#funcion que muestra los nodos que son alcanzables desde uno seleccionado (activar el modo)
+def reachability():
+    global modo_alcanzabilidad
+    if modo_alcanzabilidad:
+        modo_alcanzabilidad = False
+        print("Modo alcanzables desactivado.")
+    else:
+        modo_alcanzabilidad = True
+        print("Modo alcanzables activado. Haz clic para ver los nodos alcanzables.")
 
 #activar el modo de encontrar el camino
 def encontrar_camino():
@@ -114,19 +126,50 @@ def alcanzable():
         modo_alcanzable = True
         print("Modo alcanzable activado. Haz clic para ver si son alcanzables. ")
 
-
+#exportar
 def exportar():
     global shortest_path_global
     if shortest_path_global is None:
-        messagebox.showwarning("Exportar ruta", "No hay camino para exportar.")
+        messagebox.showwarning("WARNING", "No hay camino para exportar.")
         return
     export_to_kml(shortest_path_global, "ruta_exportada.kml")
-    messagebox.showinfo("Exportar ruta", "Archivo KML exportado con éxito.")
+    messagebox.showinfo("INFORMACION", "Archivo KML exportado con éxito.")
 
+#calcular el tiempo de vuelo
+def calcular_tiempo():
+    global shortest_path_global, grafo_activo
+    if shortest_path_global is None:
+        messagebox.showwarning("WARNING", "Primero encuentra un camino entre dos nodos. ")
+        return
+    velocidad = simpledialog.askfloat("Velocidad",
+                                      "Introduce la velocidad (km/h):",
+                                      minvalue=0.1)
+    if velocidad is None:
+        return
+    distancia_total = 0
+    for i in range(len(shortest_path_global.nodes) - 1):
+        nodo_actual = shortest_path_global.nodes[i]
+        nodo_siguiente = shortest_path_global.nodes[i + 1]
+        segmento = next((s for s in grafo_activo.segments if
+                         (s.origin == nodo_actual and s.destination == nodo_siguiente) or
+                         (s.origin == nodo_siguiente and s.destination == nodo_actual)), None)
+        if segmento:
+            distancia_total += segmento.cost
+    tiempo_horas = distancia_total / velocidad
+    horas = int(tiempo_horas)
+    minutos_restantes = (tiempo_horas - horas) * 60
+    minutos = int(minutos_restantes)
+    segundos = int((minutos_restantes - minutos) * 60)
+    mensaje = (f"Distancia total del camino: {distancia_total:.2f} km\n"
+               f"Velocidad: {velocidad} km/h\n"
+               f"Tiempo estimado: {horas}h {minutos}m {segundos}s")
+    messagebox.showinfo("Tiempo de recorrido", mensaje)
 
+#encontrar el camino mas corto mediante texto
 def camino():
     global shortest_path_global, grafo_activo, canvas_picture
     nodos_text = entry_nodos.get().strip()
+
     if not nodos_text:
         print("Introduce dos nodos separados por espacio, ej: A D")
         return
@@ -135,25 +178,16 @@ def camino():
         print("Introduce exactamente dos nodos separados por espacio")
         return
     origen_name, destino_name = nodos
-
-    # Buscar nodos en el grafo por nombre (asumiendo que grafo_activo.nodes es iterable con atributo name)
     origen = next((n for n in grafo_activo.nodes if n.name == origen_name), None)
     destino = next((n for n in grafo_activo.nodes if n.name == destino_name), None)
-
     if origen is None or destino is None:
         print(f"Nodos no encontrados en el grafo: {origen_name}, {destino_name}")
         return
-
-    # Encontrar camino más corto
     shortest_path = FindShortestPath(grafo_activo, origen, destino)
-
     if not shortest_path or not shortest_path.nodes:
-        print("No se encontró camino entre los nodos indicados.")
+        messagebox.showinfo("CAMINO NO DISPONIBLE", "Estos dos nodos no se pueden conectar!!")
         return
-
-    # Plotear camino (adaptar a tu función y parámetros)
     plt.close('all')  # Cierra figuras previas
-
     if 'graph_cat' in globals() and grafo_activo == graph_cat:
         figsize = (15, 7)
         xticks = range(-1, 5, 1)
@@ -179,9 +213,8 @@ def camino():
         xticks = range(-5, 26, 5)
         yticks = range(-5, 26, 5)
 
+    messagebox.showinfo("WARNING", "Esto puede tardar unos segundos.")
     PlotPath(grafo_activo, shortest_path, figsize, xticks, yticks)
-
-    # Mostrar en canvas tkinter (igual que tú haces)
     fig = plt.gcf()
     new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
     new_canvas.mpl_connect('button_press_event', on_click)
@@ -189,21 +222,21 @@ def camino():
 
     if canvas_picture is not None:
         canvas_picture.grid_forget()
+
     canvas_picture = new_canvas.get_tk_widget()
     canvas_picture.config(width=600, height=400)
     canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
     canvas = new_canvas
-
     shortest_path_global = shortest_path
-
 
 #inicializar todas las listas vacías que usaré posteriormente
 nodos_seleccionados = []
 nodos_segmento = []
 def on_click(event):
     print("Click detectado")
-    global modo_anadir, modo_seleccion, grafo_activo, canvas_picture, canvas, nodos_segmento, modo_anadir_segmento, modo_eliminar, origen_seleccionado, destino_seleccionado, nodos_seleccionados, shortest_path_global
+    global modo_anadir, modo_seleccion, grafo_activo, canvas_picture, canvas, nodos_segmento, modo_anadir_segmento, modo_eliminar, origen_seleccionado, destino_seleccionado, nodos_seleccionados, shortest_path_global, modo_alcanzabilidad
     x_click, y_click = event.xdata, event.ydata
+
 
     if x_click is None or y_click is None:
         return
@@ -250,14 +283,14 @@ def on_click(event):
         canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
         canvas = new_canvas
 
+
     if x_click is None or y_click is None:
         return
     elif modo_seleccion:
-        threshold = 0.1
+        threshold = 0.2
         for nodo in grafo_activo.nodes:
             dist = ((nodo.coordinate_x - x_click) ** 2 + (nodo.coordinate_y - y_click) ** 2) ** 0.5
             if dist <= threshold:
-                modo_seleccion = False
                 plt.close('all')
                 if 'graph_cat' in globals() and grafo_activo == graph_cat:
                     figsize = (15, 7)
@@ -286,6 +319,7 @@ def on_click(event):
                 PlotNode(grafo_activo, nodo.name, figsize, xticks, yticks)
                 fig = plt.gcf()
                 new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
+                new_canvas.mpl_connect('button_press_event', on_click)
                 new_canvas.draw()
                 if canvas_picture is not None:
                     canvas_picture.grid_forget()
@@ -295,10 +329,11 @@ def on_click(event):
                 canvas = new_canvas
                 break
 
+
     if x_click is None or y_click is None:
         return
     elif modo_anadir_segmento:
-        threshold = 0.1
+        threshold = 0.2
         for nodo in grafo_activo.nodes:
             x, y = nodo.coordinate_x, nodo.coordinate_y
             dist = ((x - x_click) ** 2 + (y - y_click) ** 2) ** 0.5
@@ -350,10 +385,11 @@ def on_click(event):
             canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
             canvas = new_canvas
 
+
     if x_click is None or y_click is None:
         return
     elif modo_eliminar:
-        umbral = 0.1
+        umbral = 0.2
         for node in grafo_activo.nodes:
             dx = node.coordinate_x - x_click
             dy = node.coordinate_y - y_click
@@ -398,12 +434,13 @@ def on_click(event):
                 canvas = new_canvas
                 break
 
+
     if x_click is None or y_click is None:
         return
     elif modo_encontrar_camino:
         nodo_mas_cercano = None
         distancia_min = float('inf')
-        umbral_distancia = 0.1  # Ajusta según escala de tu gráfico
+        umbral_distancia = 0.2  # Ajusta según escala de tu gráfico
         for nodo in grafo_activo.nodes:
             dx = nodo.coordinate_x - x_click
             dy = nodo.coordinate_y - y_click
@@ -422,50 +459,55 @@ def on_click(event):
             print(f"Destino seleccionado: {destino_seleccionado.name}")
             shortest_path = FindShortestPath(grafo_activo, origen_seleccionado, destino_seleccionado)
             shortest_path_global = shortest_path
+            if not shortest_path or not shortest_path.nodes:
+                messagebox.showinfo("CAMINO NO DISPONIBLE", "Estos dos nodos no se pueden conectar!!")
+                return
             plt.close('all')
-            if 'graph_cat' in globals() and grafo_activo == graph_cat:
-                figsize = (15, 7)
-                xticks = range(-1, 5, 1)
-                yticks = np.arange(38, 42.5, 0.5)
-            elif 'graph_esp' in globals() and grafo_activo == graph_esp:
-                figsize = (17, 8)
-                xticks = range(-9, 5, 1)
-                yticks = np.arange(37, 43.5, 0.5)
-            elif 'graph_eur' in globals() and grafo_activo == graph_eur:
-                figsize = (17, 8)
-                xticks = range(-6, 6, 1)
-                yticks = np.arange(37.5, 50, 0.5)
-            elif 'G' in globals() and grafo_activo == G:
-                figsize = (8, 6)
-                xticks = range(-5, 26, 5)
-                yticks = range(-5, 26, 5)
-            elif 'FF' in globals() and grafo_activo == FF:
-                figsize = (8, 6)
-                xticks = range(-5, 26, 5)
-                yticks = range(-5, 26, 5)
-            else:
-                figsize = (8, 6)
-                xticks = range(-5, 26, 5)
-                yticks = range(-5, 26, 5)
-            PlotPath(grafo_activo, shortest_path, figsize, xticks, yticks)
-            fig = plt.gcf()
-            new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
-            new_canvas.mpl_connect('button_press_event', on_click)
-            new_canvas.draw()
+            if shortest_path is not None and shortest_path.nodes:
+                if 'graph_cat' in globals() and grafo_activo == graph_cat:
+                    figsize = (15, 7)
+                    xticks = range(-1, 5, 1)
+                    yticks = np.arange(38, 42.5, 0.5)
+                elif 'graph_esp' in globals() and grafo_activo == graph_esp:
+                    figsize = (17, 8)
+                    xticks = range(-9, 5, 1)
+                    yticks = np.arange(37, 43.5, 0.5)
+                elif 'graph_eur' in globals() and grafo_activo == graph_eur:
+                    figsize = (17, 8)
+                    xticks = range(-6, 6, 1)
+                    yticks = np.arange(37.5, 50, 0.5)
+                elif 'G' in globals() and grafo_activo == G:
+                    figsize = (8, 6)
+                    xticks = range(-5, 26, 5)
+                    yticks = range(-5, 26, 5)
+                elif 'FF' in globals() and grafo_activo == FF:
+                    figsize = (8, 6)
+                    xticks = range(-5, 26, 5)
+                    yticks = range(-5, 26, 5)
+                else:
+                    figsize = (8, 6)
+                    xticks = range(-5, 26, 5)
+                    yticks = range(-5, 26, 5)
+                messagebox.showinfo("ESPERE", "Encontrando el camino más corto. Esto puede tardar unos segundos. ")
+                PlotPath(grafo_activo, shortest_path, figsize, xticks, yticks)
+                fig = plt.gcf()
+                new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
+                new_canvas.mpl_connect('button_press_event', on_click)
+                new_canvas.draw()
+                if canvas_picture is not None:
+                    canvas_picture.grid_forget()
+                canvas_picture = new_canvas.get_tk_widget()
+                canvas_picture.config(width=600, height=400)
+                canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
+                canvas = new_canvas
+                origen_seleccionado = None
+                destino_seleccionado = None
 
-            if canvas_picture is not None:
-                canvas_picture.grid_forget()
-            canvas_picture = new_canvas.get_tk_widget()
-            canvas_picture.config(width=600, height=400)
-            canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
-            canvas = new_canvas
-            origen_seleccionado = None
-            destino_seleccionado = None
 
     if x_click is None or y_click is None:
         return
     elif modo_alcanzable:
-        threshold = 0.1
+        threshold = 0.2
         for nodo in grafo_activo.nodes:
             x, y = nodo.coordinate_x, nodo.coordinate_y
             dist = ((x - x_click) ** 2 + (y - y_click) ** 2) ** 0.5
@@ -475,48 +517,62 @@ def on_click(event):
                 break
         if len(nodos_seleccionados) == 2:
             n1, n2 = nodos_seleccionados
-            es_alcanzable = Reachability(grafo_activo, n1, n2)
+            es_alcanzable = Alcanzabilidad(grafo_activo, n1, n2)
             if es_alcanzable:
-                print(f"El nodo {n2.name} es alcanzable desde {n1.name}")
+                messagebox.showinfo("INFORMACION", "Los nodos son alcanzables.")
             else:
-                print(f"El nodo {n2.name} NO es alcanzable desde {n1.name}")
+                messagebox.showinfo("WARNING", "Los nodos no son alcanzables.")
             nodos_seleccionados = []
-        if 'graph_cat' in globals() and grafo_activo == graph_cat:
-            figsize = (15, 7)
-            xticks = range(-1, 5, 1)
-            yticks = np.arange(38, 42.5, 0.5)
-        elif 'graph_esp' in globals() and grafo_activo == graph_esp:
-            figsize = (17, 8)
-            xticks = range(-9, 5, 1)
-            yticks = np.arange(37, 43.5, 0.5)
-        elif 'graph_eur' in globals() and grafo_activo == graph_eur:
-            figsize = (17, 8)
-            xticks = range(-6, 6, 1)
-            yticks = np.arange(37.5, 50, 0.5)
-        elif 'G' in globals() and grafo_activo == G:
-            figsize = (8, 6)
-            xticks = range(-5, 26, 5)
-            yticks = range(-5, 26, 5)
-        elif 'FF' in globals() and grafo_activo == FF:
-            figsize = (8, 6)
-            xticks = range(-5, 26, 5)
-            yticks = range(-5, 26, 5)
-        else:
-            figsize = (8, 6)
-            xticks = range(-5, 26, 5)
-            yticks = range(-5, 26, 5)
-        Plot(grafo_activo, figsize, xticks, yticks)
-        fig = plt.gcf()
-        new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
-        new_canvas.mpl_connect('button_press_event', on_click)
-        new_canvas.draw()
-        if canvas_picture is not None:
-            canvas_picture.grid_forget()
-        canvas_picture = new_canvas.get_tk_widget()
-        canvas_picture.config(width=600, height=400)
-        canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
-        canvas = new_canvas
 
+
+    if x_click is None or y_click is None:
+        return
+    elif modo_alcanzabilidad:
+        umbral = 0.2
+        for node in grafo_activo.nodes:
+            dx = node.coordinate_x - x_click
+            dy = node.coordinate_y - y_click
+            distancia = (dx ** 2 + dy ** 2) ** 0.5
+            if distancia < umbral:
+                plt.close('all')
+                # Detectar figsize, xticks, yticks según grafo_activo
+                if 'graph_cat' in globals() and grafo_activo == graph_cat:
+                    figsize = (15, 7)
+                    xticks = range(-1, 5, 1)
+                    yticks = np.arange(38, 42.5, 0.5)
+                elif 'graph_esp' in globals() and grafo_activo == graph_esp:
+                    figsize = (17, 8)
+                    xticks = range(-9, 5, 1)
+                    yticks = np.arange(37, 43.5, 0.5)
+                elif 'graph_eur' in globals() and grafo_activo == graph_eur:
+                    figsize = (17, 8)
+                    xticks = range(-6, 6, 1)
+                    yticks = np.arange(37.5, 50, 0.5)
+                elif 'G' in globals() and grafo_activo == G:
+                    figsize = (8, 6)
+                    xticks = range(-5, 26, 5)
+                    yticks = range(-5, 26, 5)
+                elif 'FF' in globals() and grafo_activo == FF:
+                    figsize = (8, 6)
+                    xticks = range(-5, 26, 5)
+                    yticks = range(-5, 26, 5)
+                else:
+                    figsize = (8, 6)
+                    xticks = range(-5, 26, 5)
+                    yticks = range(-5, 26, 5)
+                messagebox.showinfo("ATENCION", "Calculando los nodos alcanzables. Esto puede llevar unos segundos. ")
+                Reachability(grafo_activo, figsize=figsize, xticks=xticks, yticks=yticks, start_node=node)
+                fig = plt.gcf()
+                new_canvas = FigureCanvasTkAgg(fig, master=outputs_frame)
+                new_canvas.mpl_connect('button_press_event', on_click)
+                new_canvas.draw()
+                if canvas_picture is not None:
+                    canvas_picture.grid_forget()
+                canvas_picture = new_canvas.get_tk_widget()
+                canvas_picture.config(width=600, height=400)
+                canvas_picture.grid(row=0, column=0, padx=5, pady=5, sticky=tk.N + tk.E + tk.W + tk.S)
+                canvas = new_canvas
+                break
 
 #inicializar el grafo vacío y plotearlo por pantalla al llamar a la función con el botón
 def vacío():
@@ -527,7 +583,6 @@ def vacío():
     xticks = range(-5,26,5)
     yticks = range(-5,26,5)
     Plot(GV, figsize, xticks, yticks)
-    Plot(GV)
     fig = plt.gcf()
     show_plot(fig, GV)
 
@@ -542,7 +597,6 @@ def ejemplo():
     Plot(G, figsize, xticks, yticks)
     fig = plt.gcf()
     show_plot(fig, G)
-
 
 #cargar el grafo de cataluña al llamar con el botón
 def catalunya():
@@ -583,13 +637,13 @@ def europa():
     fig = plt.gcf()
     show_plot(fig, graph_esp)
 
-
 #seleccionar el grafo activo y mandarlo a un archivo llamando a la función ToFile
 def save_grafo_activo():
     filename = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt")])
     if filename:
         ToFile(grafo_activo, filename)
         print(f"Grafo activo guardado en {filename}.")
+        messagebox.showinfo("SAVE_FILE", f"Grafo guardado en {filename}.")
 
 #plotear un grafo que está en un archivo
 def plot_file():
@@ -627,7 +681,7 @@ def plot_file():
 root = tk.Tk()
 root.geometry("1700x950") # Tamaño inicial
 root.title("INFO_PROJECT")
-#la ventana principal tiene once filas y dos columnas
+#la ventana principal tiene trece filas y dos columnas
 root.columnconfigure(0, weight = 1)
 root.columnconfigure(1, weight = 15)
 root.rowconfigure(0, weight = 1)
@@ -751,7 +805,7 @@ input_frame_6.grid(row = 9, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E
 input_frame_6.rowconfigure(0, weight = 1)
 input_frame_6.columnconfigure(0, weight = 1)
 #y el boton del frame
-button13= tk.Button(input_frame_6, text = '¿Es alcanzable?', command = alcanzable, bg = 'lightblue', fg = 'white')
+button13= tk.Button(input_frame_6, text = 'Reachability', command = reachability, bg = 'lightblue', fg = 'white')
 button13.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 
@@ -774,8 +828,8 @@ button15= tk.Button(input_frame_7, text = 'EUR', command = europa, bg = 'lightbl
 button15.grid(row = 1, column = 0, columnspan = 2, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 
-#en la columna 0 fila 9 está el input frame en el cual el usuario introduce un grafo y el nodo del que quiere los vecinos
-input_frame_6 = tk.LabelFrame(root, text = 'CAMIvNO_TEXTO')
+#en la columna 0 fila 11 está el input frame en el cual el usuario introduce un grafo y el nodo del que quiere los vecinos
+input_frame_6 = tk.LabelFrame(root, text = 'CAMINO_TEXTO')
 input_frame_6.grid(row = 11, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 #configuración del frame
 input_frame_6.rowconfigure(0, weight = 1)
@@ -789,7 +843,7 @@ button13= tk.Button(input_frame_6, text = 'Encontrar camino', command = camino, 
 button13.grid(row = 1, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 
-#en la columna 0 fila 9 está el input frame en el cual el usuario introduce un grafo y el nodo del que quiere los vecinos
+#en la columna 0 fila 12 está el input frame en el cual el usuario introduce un grafo y el nodo del que quiere los vecinos
 input_frame_6 = tk.LabelFrame(root, text = 'EXPORT TO KML')
 input_frame_6.grid(row = 12, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 #configuración del frame
@@ -800,9 +854,32 @@ button13= tk.Button(input_frame_6, text = 'Exportar', command = exportar, bg = '
 button13.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
 
 
+# Frame para calcular tiempo de recorrido (primera función extra)
+input_frame_7 = tk.LabelFrame(root, text = 'TIEMPO DE RECORRIDO')
+input_frame_7.grid(row = 13, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+#configuración del frame
+input_frame_7.rowconfigure(0, weight = 1)
+input_frame_7.columnconfigure(0, weight = 1)
+#y el boton del frame
+button14= tk.Button(input_frame_7, text = 'Calcular tiempo', command = calcular_tiempo, bg = 'lightblue', fg = 'white')
+button14.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+
+
+# Frame para calcular la alcanzabilidad (segunda función extra)
+input_frame_8 = tk.LabelFrame(root, text = 'ALCANZABILIDAD')
+input_frame_8.grid(row = 14, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+#configuración del frame
+input_frame_8.rowconfigure(0, weight = 1)
+input_frame_8.columnconfigure(0, weight = 1)
+#y el boton del frame
+button15= tk.Button(input_frame_8, text = '¿Es alcanzable?', command = alcanzable, bg = 'lightblue', fg = 'white')
+button15.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = tk.N + tk.E + tk.W + tk.S)
+
+
+
 #en la columma 1 fila 0 de la ventana principal están los outputs
-outputs_frame = tk.LabelFrame(root, text = 'Outputs')
-outputs_frame.grid(row = 0, column = 1, rowspan = 13, padx = 5, pady = 5, sticky = "nsew")
+outputs_frame = tk.LabelFrame(root, text = 'OUTPUTS')
+outputs_frame.grid(row = 0, column = 1, rowspan = 15, padx = 5, pady = 5, sticky = "nsew")
 outputs_frame.columnconfigure(0, weight = 1)
 outputs_frame.rowconfigure(0, weight = 1)
 

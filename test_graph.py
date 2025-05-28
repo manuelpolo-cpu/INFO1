@@ -1,5 +1,6 @@
 from graph import *
 from node import *
+
 def CreateGraph_1 ():
  G = Graph()
  AddNode(G, Node("A",1,20))
@@ -43,9 +44,6 @@ def CreateGraph_1 ():
 print ("Probando el grafo...")
 G = CreateGraph_1()
 
-
-
-
 def CreateGraph_2():
  H = Graph()
  AddNode(H, Node("A", 1, 20))
@@ -63,8 +61,6 @@ def CreateGraph_2():
  return H
 print("Probando el siguiente grafo...")
 H = CreateGraph_2()
-
-
 n = GetClosest(G,15,5)
 print (n.name) # La respuesta debe ser J
 n = GetClosest(G,8,19)

@@ -49,12 +49,20 @@ def FindShortestPath(grafo, origen, destino):
     initial_path = Path(origen, destino)
     AddNodeToPath(initial_path, origen)
     current_paths = [initial_path]
+    visited = set()  # nodos ya visitados
+
     while current_paths:
         current_paths.sort(key=lambda path: path.total_cost + Distance(path.nodes[-1], destino))
         current_path = current_paths.pop(0)
-        if current_path.nodes[-1] == destino:
-            return current_path
         last_node = current_path.nodes[-1]
+
+        if last_node == destino:
+            return current_path
+
+        if last_node in visited:
+            continue  # ya expandido, evitar redundancia
+        visited.add(last_node)
+
         for neighbor in last_node.neighbors:
             if ContainsNode(current_path, neighbor):
                 continue
@@ -64,7 +72,47 @@ def FindShortestPath(grafo, origen, destino):
             AddNodeToPath(new_path, neighbor)
             new_path.total_cost = current_path.total_cost + Distance(last_node, neighbor)
             current_paths.append(new_path)
+
     return None
+
+#función que pinta los nodos alcanzables desde uno seleccionado
+def Reachability(grafo, figsize=None, xticks=None, yticks=None, start_node=None):
+    alcanzables = set()
+    if start_node is not None:
+        visitados = set()
+        cola = [start_node]
+        while cola:
+            nodo = cola.pop(0)
+            if nodo not in visitados:
+                visitados.add(nodo)
+                for vecino in nodo.neighbors:
+                    if vecino not in visitados:
+                        cola.append(vecino)
+        alcanzables = visitados
+    plt.figure(figsize=figsize)
+    for nodo in grafo.nodes:
+        if nodo == start_node:
+            color = 'lightgreen'
+            size = 140
+            text_color = 'grey'
+            font_weight = 'bold'
+        elif nodo in alcanzables:
+            color = 'grey'
+            size = 120
+            text_color = 'lightgreen'
+            font_weight = 'bold'
+        else:
+            color = 'lightgrey'
+            size = 100
+            text_color = 'lightgrey'
+            font_weight = 'bold'
+        plt.scatter(nodo.coordinate_x, nodo.coordinate_y, color=color, s=size)
+        plt.text(nodo.coordinate_x, nodo.coordinate_y, nodo.name, fontsize=10, color=text_color, fontweight=font_weight)
+    plt.grid(color='lightpink')
+    if xticks is not None:
+        plt.xticks(xticks)
+    if yticks is not None:
+        plt.yticks(yticks)
 
 #plotear el camino
 def PlotPath(G, P, figsize, xticks, yticks):
@@ -123,20 +171,6 @@ def PlotPath(G, P, figsize, xticks, yticks):
     plt.yticks(yticks)
     plt.grid(color='lightpink')
 
-#alcanzabilidad de un nodo sobre otro
-def Reachability(g, n1, n2, visited=None):
-    if visited is None:
-        visited = set()  # Iniciar el conjunto de nodos visitados
-    visited.add(n1)
-    if n1 == n2:
-        return True
-    for neighbor in n1.neighbors:
-        if neighbor not in visited:  # Si el vecino no ha sido visitado
-            # Llamar recursivamente con el vecino
-            if Reachability(g, neighbor, n2, visited):
-                return True
-    return False
-
 #exportar una ruta a un archivo .kml
 def export_to_kml(path, filename):
     kml_header = (
@@ -146,11 +180,8 @@ def export_to_kml(path, filename):
         f'<name>Shortest Path</name>'
         f'<description>Path from {path.origen.name} to {path.destination.name}</description>'
     )
-
     kml_footer = '</Document></kml>'
-
     coordinates = " ".join(f"{node.coordinate_x},{node.coordinate_y},0" for node in path.nodes)
-
     kml_linestring = (
         '<Placemark>'
         '<name>Ruta mas corta</name>'
@@ -168,3 +199,16 @@ def export_to_kml(path, filename):
     kml_content = kml_header + kml_linestring + kml_footer
     with open(filename, "w", encoding="utf-8") as f:
         f.write(kml_content)
+
+#alcanzabilidad de un nodo sobre otro (función extra 1)
+def Alcanzabilidad(g, n1, n2, visited=None):
+    if visited is None:
+        visited = set()
+    visited.add(n1)
+    if n1 == n2:
+        return True
+    for neighbor in n1.neighbors:
+        if neighbor not in visited:
+            if Alcanzabilidad(g, neighbor, n2, visited):
+                return True
+    return False
